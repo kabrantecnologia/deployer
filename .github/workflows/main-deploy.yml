@@ -8,9 +8,9 @@ on:
         required: true
         type: choice
         options:
-          - integra
-          - compliance
-          - tricket
+          - integra-frontend
+          - compliance-frontend
+          - tricket-frontend
       branch:
         description: 'Qual branch do projeto?'
         required: true
@@ -37,7 +37,7 @@ jobs:
       - name: 3. Checkout do repositório da Aplicação
         uses: actions/checkout@v3
         with:
-          repository: kabrantecnologia/${{ inputs.project_name }}-frontend
+          repository: kabrantecnologia/${{ inputs.project_name }}
           ref: ${{ inputs.branch }}
           path: 'app-source'
           token: ${{ secrets.GH_PAT }} # Necessário para clonar repositórios privados
