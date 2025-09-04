@@ -1,0 +1,20 @@
+name: compliance-app
+
+services:
+  frontend:
+    # A imagem será puxada do registro. O valor virá do arquivo .env
+    image: ${DOCKER_IMAGE}
+    container_name: compliance-frontend
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.compliance.rule=Host(`app-staging-compliance.kabran.com.br`)"
+      - "traefik.http.routers.compliance.entrypoints=web,websecure"
+      - "traefik.http.routers.compliance.tls.certresolver=cloudflare"
+      - "traefik.http.services.compliance.loadbalancer.server.port=80"
+    networks:
+      - traefik-proxy
+
+networks:
+  traefik-proxy:
+    external: true

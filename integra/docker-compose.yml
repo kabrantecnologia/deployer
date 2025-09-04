@@ -1,0 +1,20 @@
+name: integra-app
+
+services:
+  frontend:
+    # A imagem será puxada do registro. O valor virá do arquivo .env
+    image: ${DOCKER_IMAGE}
+    container_name: integra-frontend
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.integra.rule=Host(`app-staging-integra.kabran.com.br`)"
+      - "traefik.http.routers.integra.entrypoints=web,websecure"
+      - "traefik.http.routers.integra.tls.certresolver=cloudflare"
+      - "traefik.http.services.integra.loadbalancer.server.port=80"
+    networks:
+      - traefik-proxy
+
+networks:
+  traefik-proxy:
+    external: true
