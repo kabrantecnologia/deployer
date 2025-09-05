@@ -5,4 +5,4 @@ COPY ./dist /usr/share/nginx/html
 # Expor a porta 80
 EXPOSE 80
 # Iniciar o Nginx
-CMD [\"nginx\", \"-g\", \"daemon off;\"]
+CMD ["nginx", "-g", "daemon off;"]
