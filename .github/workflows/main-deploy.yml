@@ -1,6 +1,7 @@
-name: Manual Deployer
+name: Deployer
 
 on:
+  # Permite o acionamento manual pela interface do GitHub
   workflow_dispatch:
     inputs:
       project_name:
@@ -14,7 +15,12 @@ on:
       branch:
         description: 'Qual branch do projeto?'
         required: true
+        type: string
         default: 'main'
+
+  # Permite o acionamento por outros repositórios (webhooks)
+  repository_dispatch:
+    types: [deploy-trigger]
 
 jobs:
   build-and-deploy:
@@ -24,10 +30,22 @@ jobs:
       packages: write
 
     steps:
+      # Etapa para definir as variáveis dinamicamente dependendo do gatilho
+      - name: Define project and branch
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "project_name=${{ github.event.inputs.project_name }}" >> $GITHUB_OUTPUT
+            echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "project_name=${{ github.event.client_payload.project_name }}" >> $GITHUB_OUTPUT
+            echo "branch=${{ github.event.client_payload.branch }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: 1. Exibindo informações do Deploy
         run: |
-          echo "🚀 Iniciando deploy para o projeto: ${{ inputs.project_name }}"
-          echo "🌱 Branch: ${{ inputs.branch }}"
+          echo "Iniciando deploy para o projeto: ${{ steps.vars.outputs.project_name }}"
+          echo "Branch: ${{ steps.vars.outputs.branch }}"
 
       - name: 2. Checkout do repositório Deployer
         uses: actions/checkout@v3
@@ -37,8 +55,8 @@ jobs:
       - name: 3. Checkout do repositório da Aplicação
         uses: actions/checkout@v3
         with:
-          repository: kabrantecnologia/${{ inputs.project_name }}
-          ref: ${{ inputs.branch }}
+          repository: kabrantecnologia/${{ steps.vars.outputs.project_name }}
+          ref: ${{ steps.vars.outputs.branch }}
           path: 'app-source'
           token: ${{ secrets.GH_PAT }} # Necessário para clonar repositórios privados
 
@@ -57,11 +75,11 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./app-source
-          file: ./deployer/${{ inputs.project_name }}/Dockerfile
+          file: deployer/${{ steps.vars.outputs.project_name }}/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ inputs.project_name }}:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/${{ inputs.project_name }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.project_name }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.project_name }}:latest
 
       - name: 7. Deploy no Servidor
         uses: appleboy/ssh-action@master
@@ -70,8 +88,8 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /home/joaohenrique/workspaces/projects/${{ inputs.project_name }}
-            echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ inputs.project_name }}:latest" > .env
+            cd /home/joaohenrique/workspaces/projects/${{ steps.vars.outputs.project_name }}
+            echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.project_name }}:latest" > .env
             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GH_PAT }}
             docker compose pull
             docker compose up -d
